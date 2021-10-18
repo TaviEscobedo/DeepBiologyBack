@@ -77,22 +77,28 @@ router.post('/login',(req, res)=>{
                   return res.json({message:'contraseña incorrecta',key:false})
                    
                 }else{
-                    //  const id=results[0].id
+                      const id=results[0].id
+                      const name=results[0].username
+                      const user={
+                          id:id,
+                          name:name
+                      }
                     // const name=results[0].username
-                    const user={
-                        id:results[0].id,
-                        name:results[0].username
-                    }
+                    // const user={
+                    //     id:results[0].id,
+                    //     name:results[0].username
+                    // }
                     console.log('id del usuario encontrado',user);
+                    const accessToken=generateToken(user)
 
-                    const token= jwt.sign(user,process.env.SECRET,{
-                        expiresIn:'1d'
-                    })
-                    console.log('el token es: ',token);
+                    // const token= jwt.sign(user,process.env.SECRET,{
+                    //     expiresIn:'1d'
+                    // })
+                    console.log('el token es: ',accessToken);
                     // res.query()
-                    res.header('authorization',token).json({
+                    res.header('authorization',accessToken).json({
                         message:'usuario autenticado',
-                        token:token,
+                        token:accessToken,
                         user:user,
                         key:true
                     })
@@ -107,6 +113,14 @@ router.post('/login',(req, res)=>{
 
 }) // FIN del la función POST LOGIN
 
+
+//generar el token
+ function generateToken(user){
+     return jwt.sign(user,process.env.SECRET ,{
+        expiresIn:'50m'
+    })
+ }
+
 //middleware para validar el token
     function validateToken(req, res, next){
         const accessToken= req.headers['authorization'] || req.query.accesstoken;
@@ -114,9 +128,9 @@ router.post('/login',(req, res)=>{
 
         jwt.verify(accessToken,process.env.SECRET,(err, user)=>{
             if(err)
-            { res.send('Access denied, token expired or incorrect')}
+                { res.send('Access denied, token expired or incorrect')}
             else{
-                console.log('user logged', user);
+                req.user=user;
                 
                 next();
             }
@@ -151,7 +165,7 @@ router.post('/comentarios', (req, res) => {
 }); //fin post comentario
 
 
-router.get('/comentarios', (req, res) => {
+router.get('/comentarios',validateToken,(req, res) => {
     
             const query_id_clase = req.query.claseId;
             console.log("query del front", query_id_clase)
@@ -160,7 +174,7 @@ router.get('/comentarios', (req, res) => {
             connection.query(sql,(error, results)=>{
                 if(error) throw error;
                 if(results.length>0){
-                    res.json(results);
+                    res.json({username:req.user,results});
                     console.log("comentarios por clase",results);
                 }else{
                     // res.send('Not results');
